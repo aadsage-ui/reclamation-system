@@ -1068,19 +1068,50 @@ function submitReclamation() {
         alert('Пожалуйста, выберите номер заказа.');
         return;
     }
-    let hasSelectedItems = false;
-    if (document.body.classList.contains('mobile-version')) {
-        hasSelectedItems = document.querySelectorAll('.mobile-reason-btn.active').length > 0;
-    } else {
-        hasSelectedItems = document.querySelectorAll('.reason-tile.active').length > 0;
-    }
-    if (!hasSelectedItems && additionalArticles.length === 0) {
+
+    // Собираем выбранные товары
+    let selectedItems = [];
+    
+    // Проверяем товары из таблицы (десктоп)
+    document.querySelectorAll('.reason-tile.active').forEach(tile => {
+        const index = tile.getAttribute('data-index');
+        const quantityInput = document.querySelector(`#tile-quantity-${index} input`);
+        if (quantityInput && quantityInput.value) {
+            selectedItems.push({ index, quantity: quantityInput.value });
+        }
+    });
+
+    // Проверяем товары из мобильной версии
+    document.querySelectorAll('.mobile-reason-btn.active').forEach(button => {
+        const index = button.getAttribute('data-index');
+        const quantityInput = document.querySelector(`.mobile-quantity[data-index="${index}"]`);
+        if (quantityInput && quantityInput.value) {
+            selectedItems.push({ index, quantity: quantityInput.value });
+        }
+    });
+
+    // Проверяем дополнительные артикулы излишков
+    let hasAdditionalArticles = false;
+    additionalArticles.forEach(article => {
+        if ((article.code && article.name && article.quantity > 0) || article.description) {
+            hasAdditionalArticles = true;
+        }
+    });
+
+    // Если ничего не выбрано
+    if (selectedItems.length === 0 && !hasAdditionalArticles) {
         alert('Пожалуйста, выберите хотя бы один товар для рекламации или добавьте артикул излишка.');
         return;
     }
-    if (!checkAttachmentRequirement()) return;
+
+    // Проверяем наличие обязательных файлов
+    if (!checkAttachmentRequirement()) {
+        return;
+    }
+
     const comment = document.getElementById('reclamation-comment').value.trim();
     const reclamationNumber = orders[selectedOrder].reclamationNumber;
+    
     const reclamationData = {
         id: reclamationCounter++,
         number: reclamationNumber,
@@ -1088,7 +1119,7 @@ function submitReclamation() {
         status: 'inwork',
         resolution: 'На рассмотрении',
         responsible: 'Рубцов Р.А.',
-        amount: parseFloat(document.getElementById('reclamation-total').textContent),
+        amount: 0, // Сначала 0, потом посчитаем
         tags: [],
         orderNumber: selectedOrder,
         comment: comment,
@@ -1096,16 +1127,24 @@ function submitReclamation() {
         items: [],
         communication: []
     };
+
     const orderItems = orders[selectedOrder].products;
-    if (document.body.classList.contains('mobile-version')) {
-        document.querySelectorAll('.mobile-product-card').forEach(card => {
-            const index = card.getAttribute('data-index');
-            const activeButton = card.querySelector('.mobile-reason-btn.active');
-            const quantityInput = card.querySelector('.mobile-quantity');
-            if (activeButton && quantityInput && quantityInput.value) {
-                const reason = activeButton.getAttribute('data-reason');
-                const quantity = parseInt(quantityInput.value) || 0;
-                const item = orderItems[index];
+    let totalAmount = 0;
+
+    // Обрабатываем выбранные товары из таблицы
+    document.querySelectorAll('.reason-tile.active').forEach(tile => {
+        const index = parseInt(tile.getAttribute('data-index'));
+        const reason = tile.getAttribute('data-reason');
+        const quantityInput = document.querySelector(`#tile-quantity-${index} input`);
+        
+        if (quantityInput && quantityInput.value) {
+            const quantity = parseInt(quantityInput.value) || 0;
+            const item = orderItems[index];
+            
+            if (quantity > 0) {
+                const itemAmount = quantity * item.price;
+                totalAmount += itemAmount;
+                
                 const reclamationItem = {
                     name: item.name,
                     code: item.code,
@@ -1116,22 +1155,42 @@ function submitReclamation() {
                     resolution: 'На рассмотрении',
                     files: itemFiles[index] ? itemFiles[index].map(file => file.name) : []
                 };
+                
                 reclamationData.items.push(reclamationItem);
-                if (itemFiles[index]) reclamationData.files.push(...itemFiles[index].map(file => file.name));
+                
+                if (itemFiles[index]) {
+                    reclamationData.files.push(...itemFiles[index].map(file => file.name));
+                }
+                
+                // Добавляем тег в зависимости от причины
+                let tagName = '';
                 switch(reason) {
-                    case 'shortage': reclamationData.tags.push('Недостача'); break;
-                    case 'excess': reclamationData.tags.push('Излишек'); break;
-                    case 'breakage': reclamationData.tags.push('Бой'); break;
+                    case 'shortage': tagName = 'Недостача'; break;
+                    case 'excess': tagName = 'Излишек'; break;
+                    case 'breakage': tagName = 'Бой'; break;
+                }
+                
+                if (tagName && !reclamationData.tags.includes(tagName)) {
+                    reclamationData.tags.push(tagName);
                 }
             }
-        });
-    } else {
-        orderItems.forEach((item, index) => {
-            const activeTile = document.querySelector(`.reason-tile.active[data-index="${index}"]`);
-            const quantityInput = document.querySelector(`#tile-quantity-${index} input`);
-            if (activeTile && quantityInput && quantityInput.value) {
-                const reason = activeTile.getAttribute('data-reason');
-                const quantity = parseInt(quantityInput.value) || 0;
+        }
+    });
+
+    // Обрабатываем выбранные товары из мобильной версии
+    document.querySelectorAll('.mobile-reason-btn.active').forEach(button => {
+        const index = parseInt(button.getAttribute('data-index'));
+        const reason = button.getAttribute('data-reason');
+        const quantityInput = document.querySelector(`.mobile-quantity[data-index="${index}"]`);
+        
+        if (quantityInput && quantityInput.value) {
+            const quantity = parseInt(quantityInput.value) || 0;
+            const item = orderItems[index];
+            
+            if (quantity > 0) {
+                const itemAmount = quantity * item.price;
+                totalAmount += itemAmount;
+                
                 const reclamationItem = {
                     name: item.name,
                     code: item.code,
@@ -1142,16 +1201,28 @@ function submitReclamation() {
                     resolution: 'На рассмотрении',
                     files: itemFiles[index] ? itemFiles[index].map(file => file.name) : []
                 };
+                
                 reclamationData.items.push(reclamationItem);
-                if (itemFiles[index]) reclamationData.files.push(...itemFiles[index].map(file => file.name));
+                
+                if (itemFiles[index]) {
+                    reclamationData.files.push(...itemFiles[index].map(file => file.name));
+                }
+                
+                let tagName = '';
                 switch(reason) {
-                    case 'shortage': reclamationData.tags.push('Недостача'); break;
-                    case 'excess': reclamationData.tags.push('Излишек'); break;
-                    case 'breakage': reclamationData.tags.push('Бой'); break;
+                    case 'shortage': tagName = 'Недостача'; break;
+                    case 'excess': tagName = 'Излишек'; break;
+                    case 'breakage': tagName = 'Бой'; break;
+                }
+                
+                if (tagName && !reclamationData.tags.includes(tagName)) {
+                    reclamationData.tags.push(tagName);
                 }
             }
-        });
-    }
+        }
+    });
+
+    // Обрабатываем дополнительные артикулы излишков
     additionalArticles.forEach((article, index) => {
         if ((article.code && article.name && article.quantity > 0) || article.description) {
             const reclamationItem = {
@@ -1166,15 +1237,39 @@ function submitReclamation() {
                 description: article.description || '',
                 isAdditional: true
             };
+            
             reclamationData.items.push(reclamationItem);
-            if (itemFiles[`excess-${index}`]) reclamationData.files.push(...itemFiles[`excess-${index}`].map(file => file.name));
-            if (!reclamationData.tags.includes('Излишек')) reclamationData.tags.push('Излишек');
+            
+            if (itemFiles[`excess-${index}`]) {
+                reclamationData.files.push(...itemFiles[`excess-${index}`].map(file => file.name));
+            }
+            
+            if (!reclamationData.tags.includes('Излишек')) {
+                reclamationData.tags.push('Излишек');
+            }
         }
     });
-    reclamationData.tags = [...new Set(reclamationData.tags)];
+
+    // Устанавливаем итоговую сумму
+    reclamationData.amount = parseFloat(totalAmount.toFixed(2));
+
+    // Убираем дубликаты файлов и тегов
     reclamationData.files = [...new Set(reclamationData.files)];
+    reclamationData.tags = [...new Set(reclamationData.tags)];
+
+    // Если не создано ни одного товара - показываем ошибку
+    if (reclamationData.items.length === 0) {
+        alert('Пожалуйста, укажите количество для выбранных товаров.');
+        return;
+    }
+
+    // Добавляем рекламацию в массив
     reclamations.unshift(reclamationData);
+    
+    // Обновляем доступные количества товаров
     updateAvailableQuantities(selectedOrder, reclamationData.items);
+
+    // Создаем уведомление
     notifications.unshift({
         id: notifications.length + 1,
         title: "Рекламация создана",
@@ -1184,9 +1279,15 @@ function submitReclamation() {
         reclamationId: reclamationData.id,
         read: false
     });
+
+    // Показываем модальное окно успеха
     document.getElementById('reclamation-number').textContent = reclamationData.number;
     document.getElementById('success-modal').style.display = 'flex';
+    
+    // Сбрасываем форму
     resetForm();
+    
+    // Обновляем уведомления
     loadNotifications();
 }
 
