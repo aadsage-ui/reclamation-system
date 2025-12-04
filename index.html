@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="HandheldFriendly" content="true">
+    <meta name="MobileOptimized" content="width">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Сервис поддержки клиентов</title>
+    <link href="https://fonts.googleapis.com/css2?family=Century+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Модальное окно начального выбора -->
+    <div class="guest-modal" id="initial-modal">
+        <div class="guest-container">
+            <div class="guest-logo">ЭКС</div>
+            <div class="guest-title">Добро пожаловать!</div>
+            <div class="guest-subtitle">Вы зарегистрированы на сайте ЭКС Бизнес?</div>
+            <div class="guest-options">
+                <button class="guest-option-btn" id="initial-yes-btn">Да, у меня есть аккаунт</button>
+                <button class="guest-option-btn secondary" id="initial-no-btn">Нет, я новый клиент</button>
+            </div>
+            <div class="guest-info">
+                <p><strong>Внимание:</strong> Для создания рекламации необходима регистрация или вход в существующий аккаунт.</p>
+            </div>
+        </div>
+    </div>
+    <!-- Модальное окно входа -->
+    <div class="login-modal" id="login-modal" style="display: none;">
+        <div class="login-container">
+            <div class="login-logo">ЭКС</div>
+            <div class="login-title">Вход в систему</div>
+            <div class="login-subtitle">Сервис поддержки клиентов</div>
+            <form class="login-form" id="login-form">
+                <div class="form-group">
+                    <label class="form-label">Логин</label>
+                    <input type="text" class="form-input" id="login-username" placeholder="Введите ваш логин" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" class="form-input" id="login-password" placeholder="Введите ваш пароль" required>
+                </div>
+                <div class="error-message" id="login-error">
+                    Неверный логин или пароль
+                </div>
+                <button type="submit" class="login-btn">Войти</button>
+            </form>
+            <div class="demo-accounts">
+                <div class="demo-title">Демо-аккаунты:</div>
+                <div class="demo-account">Логин: <strong>bio_smart</strong> | Пароль: <strong>demo123</strong></div>
+                <div class="demo-account">Логин: <strong>client</strong> | Пароль: <strong>test456</strong></div>
+            </div>
+        </div>
+    </div>
+    <!-- Модальное окно регистрации -->
+    <div class="login-modal" id="register-modal" style="display: none;">
+        <div class="login-container">
+            <div class="login-logo">ЭКС</div>
+            <div class="login-title">Регистрация</div>
+            <div class="login-subtitle">Создайте аккаунт в системе</div>
+            <form class="login-form" id="register-form">
+                <div class="form-group">
+                    <label class="form-label">Имя</label>
+                    <input type="text" class="form-input" id="register-name" placeholder="Введите ваше имя" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="register-email" placeholder="Введите ваш email" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Телефон</label>
+                    <input type="tel" class="form-input" id="register-phone" placeholder="Введите ваш телефон" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль</label>
+                    <input type="password" class="form-input" id="register-password" placeholder="Придумайте пароль" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Подтвердите пароль</label>
+                    <input type="password" class="form-input" id="register-password-confirm" placeholder="Повторите пароль" required>
+                </div>
+                <div class="error-message" id="register-error">
+                    Пароли не совпадают
+                </div>
+                <button type="submit" class="login-btn">Зарегистрироваться</button>
+            </form>
+            <div class="guest-info">
+                <p>После регистрации вы получите доступ ко всем функциям системы, включая создание заказов и полный доступ к истории рекламаций.</p>
+            </div>
+        </div>
+    </div>
+    <!-- Основное приложение -->
+    <div id="main-app" style="display: none;">
+        <div class="device-warning" id="device-warning">
+            Рекомендуем использовать мобильную версию для лучшего отображения на вашем устройстве.
+            <button onclick="switchToMobile()">Переключить</button>
+        </div>
+        <header>
+            <div class="desktop-header-content">
+                <div class="header-left">
+                    <img src="https://avatars.mds.yandex.net/i?id=568a8b7393ff82cfdbdb2e5738a28259_l-12542766-images-thumbs&n=13" alt="Логотип" class="logo">
+                </div>
+                <div class="header-center">
+                    <div class="desktop-header-text">
+                        <div class="company-name">ЭКС Бизнес</div>
+                        <div class="service-name">Сервис поддержки клиентов</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-name" id="user-display-name">ООО "БИО СМАРТ"</div>
+                        <div class="user-balance">Баланс: 8382,07 руб.</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="guest-account-status limited" id="guest-account-status" style="display: none;">
+            <p><strong>Ограниченный доступ:</strong> Вы используете гостевой аккаунт. Для полного доступа ко всем функциям системы, включая создание заказов, рекомендуется <a href="#" id="register-from-guest">зарегистрироваться</a>.</p>
+        </div>
+        <div class="notification-banner" id="notification-banner">
+            <button class="notification-close" id="notification-close">×</button>
+            <p><strong>Если вы заметили ошибку или неполадку в работе нашего портала, пожалуйста, сообщите нам.</strong> Ваше удобство и бесперебойная работа нашего сервиса — наш приоритет!</p>
+            <p>Напишите нам на <strong>reclamation@elektro.ru</strong> с подробным описанием проблемы, и наша команда технической поддержки оперативно примет меры для устранения неисправности.</p>
+            <p>Спасибо за ваше обращение и помощь в улучшении нашего сервиса.</p>
+        </div>
+        <div class="nav-container">
+            <div class="nav-buttons">
+                <button class="nav-btn active" id="nav-main">Главная</button>
+                <button class="nav-btn" id="nav-create">Создать рекламацию</button>
+                <button class="nav-btn" id="nav-list">История рекламаций</button>
+            </div>
+        </div>
+        <div class="app-content">
+            <div class="container">
+                <!-- Главная страница -->
+                <div class="page active" id="main-page">
+                    <div class="main-page-grid">
+                        <div class="main-left-column">
+                            <div class="welcome-section">
+                                <h1>Добро пожаловать в сервис поддержки клиентов!</h1>
+                                <p>Мы ценим каждого клиента и готовы оперативно решить любые возникшие вопросы.</p>
+                                <p>Для создания рекламации по заказу перейдите в соответствующий раздел.</p>
+                            </div>
+                            <div class="notifications-widget" id="notifications-widget">
+                                <h3>Ваши уведомления</h3>
+                                <div class="notifications-content" id="notifications-list"></div>
+                            </div>
+                        </div>
+                        <div class="main-right-column">
+                            <div class="recent-orders-widget" id="recent-orders-widget">
+                                <h3>Последние заказы</h3>
+                                <div class="orders-content">
+                                    <div class="orders-list" id="orders-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Страница создания рекламации -->
+                <div class="page" id="create-page">
+                    <div class="welcome-section">
+                        <h1>Создание рекламации</h1>
+                        <p>Для оформления рекламации выполните следующие шаги. Убедитесь, что у вас есть все необходимые документы.</p>
+                        <div class="steps-container">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <h3>Выберите заказ</h3>
+                                <p>Выберите номер заказа, по которому хотите создать рекламацию</p>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <h3>Укажите проблему</h3>
+                                <p>Отметьте товары и укажите причину рекламации (недостача, излишек, бой)</p>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <h3>Прикрепите документы</h3>
+                                <p>Добавьте фото, акты и другие документы, подтверждающие рекламацию</p>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <h3>Отправьте заявку</h3>
+                                <p>Отправьте рекламацию на рассмотрение</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="order-selection">
+                        <div class="form-group">
+                            <label for="order-search">Выберите заказ:</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="order-search" placeholder="Начните вводить номер заказа (например, 473231 Electro.ru...)">
+                                <div id="autocomplete-list" class="autocomplete-list"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Или выберите из списка:</label>
+                            <div class="order-select-container">
+                                <select class="order-select" id="order-select">
+                                    <option value="">-- Выберите номер заказа --</option>
+                                    <option value="473231 Electro.ru">473231 Electro.ru (от 05.11.2025)</option>
+                                    <option value="НЗ1-000123684">НЗ1-000123684 (от 05.11.2025)</option>
+                                    <option value="489561 Elektro.ru">489561 Elektro.ru (от 06.11.2025)</option>
+                                    <option value="488856 Elektro.ru">488856 Elektro.ru (от 15.10.2025)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="product-code-search-container">
+                            <div class="form-group">
+                                <label for="product-code-search-input">Найти заказ по коду или наименованию товара:</label>
+                                <input type="text" id="product-code-search-input" placeholder="Введите код или наименование товара" class="form-input">
+                                <div id="product-code-search-results" class="order-search-results"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="order-details" id="order-details">
+                        <div class="order-summary">
+                            <h3>Информация о заказе</h3>
+                            <p>Общая стоимость заказа: <strong id="total-order-price">0</strong> руб.</p>
+                            <p>Дата заказа: <strong id="order-date">-</strong></p>
+                        </div>
+                        <div class="product-search-container">
+                            <div class="form-group">
+                                <label for="product-code-search">Поиск товара по коду или наименованию:</label>
+                                <input type="text" id="product-code-search" placeholder="Введите код или наименование товара" class="form-input">
+                                <div id="product-search-results" class="search-results"></div>
+                            </div>
+                        </div>
+                        <h3>Товары в заказе</h3>
+                        <div class="mobile-table-container">
+                            <table id="products-table">
+                                <thead>
+                                    <tr>
+                                        <th>Наименование товара</th>
+                                        <th>Количество</th>
+                                        <th class="price-column">Цена за ед.</th>
+                                        <th class="price-column">Сумма</th>
+                                        <th class="reason-column">Обнаруженное несоответствие</th>
+                                        <th class="files-column">Файлы</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="products-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="mobile-products-vertical" id="mobile-products-vertical"></div>
+                        <div class="add-article-section" id="add-article-section">
+                            <h3>Добавить артикул излишка (не из данного заказа)</h3>
+                            <p>Если вам поступил товар излишком, которого нет в данном заказе, вы можете добавить его здесь:</p>
+                            <div class="form-group">
+                                <button type="button" class="add-item-btn" id="add-article-btn">+ Добавить артикул</button>
+                            </div>
+                            <div class="article-items" id="article-items"></div>
+                        </div>
+                        <div class="reclamation-summary">
+                            <h3>Сводка по рекламации</h3>
+                            <p>Общая сумма рекламации: <strong id="reclamation-total">0</strong> руб.</p>
+                        </div>
+                        <div class="comment-section">
+                            <h3>Комментарий к претензии</h3>
+                            <div class="form-group">
+                                <label for="reclamation-comment">Дополнительная информация:</label>
+                                <textarea id="reclamation-comment" placeholder="Опишите подробно причину претензии, обстоятельства обнаружения проблемы и другую важную информацию..." rows="4"></textarea>
+                                <div class="comment-info">Максимальная длина комментария: 1000 символов</div>
+                            </div>
+                        </div>
+                        <div class="buttons-container">
+                            <button class="submit-btn" id="submit-btn">Отправить рекламацию</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Страница списка рекламаций -->
+                <div class="page" id="list-page">
+                    <h2>История рекламаций</h2>
+                    <div class="reclamation-search-section">
+                        <h3>Поиск рекламаций</h3>
+                        <div class="search-filters">
+                            <div class="date-search">
+                                <label>Поиск по дате:</label>
+                                <div class="date-search-container">
+                                    <button class="calendar-icon" id="calendar-toggle">📅</button>
+                                    <div class="date-inputs">
+                                        <div class="date-input-group">
+                                            <label for="date-from">С:</label>
+                                            <input type="date" id="date-from" class="form-input">
+                                        </div>
+                                        <div class="date-input-group">
+                                            <label for="date-to">По:</label>
+                                            <input type="date" id="date-to" class="form-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-search-filter">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="product-search">Поиск по товару:</label>
+                                    <input type="text" id="product-search" placeholder="Введите название товара (например, Уголь)" class="form-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="search-actions">
+                            <button class="search-btn" id="search-reclamations">Найти</button>
+                            <button class="reset-btn" id="reset-search">Сбросить</button>
+                        </div>
+                    </div>
+                    <div class="nav-sub-tabs">
+                        <button class="nav-sub-tab active" id="sub-tab-work">В работе</button>
+                        <button class="nav-sub-tab" id="sub-tab-done">Завершено</button>
+                    </div>
+                    <div class="reclamations-table desktop-version">
+                        <div class="mobile-table-container">
+                            <table id="reclamations-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>Номер рекламации</th>
+                                        <th>Дата выставления</th>
+                                        <th>Статус</th>
+                                        <th>Решение</th>
+                                        <th>Ответственный</th>
+                                        <th>Сумма рекламации</th>
+                                        <th>Хэштэги</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reclamations-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mobile-reclamations-list mobile-version-only" id="mobile-reclamations-list"></div>
+                </div>
+            </div>
+        </div>
+        <div class="success-modal" id="success-modal">
+            <div class="modal-content">
+                <div class="modal-title">Рекламация успешно зарегистрирована!</div>
+                <p>Ваша рекламация успешно зарегистрирована в системе.</p>
+                <div class="reclamation-number" id="reclamation-number">ЭКС-000012468</div>
+                <p>Вы можете отслеживать ее статус в разделе "История рекламаций".</p>
+                <button class="modal-ok-btn" id="modal-ok-btn">Ок</button>
+            </div>
+        </div>
+        <div class="defect-warning-modal" id="defect-warning-modal">
+            <div class="defect-warning-content">
+                <h2 class="defect-warning-title">Внимание!</h2>
+                <p class="defect-warning-text">Претензии на брак могут рассматриваться до 45 дней, если на то будет необходимость в виде экспертизы или отправки товара на ремонт.</p>
+                <button class="defect-warning-ok" id="defect-warning-ok">Понятно</button>
+            </div>
+        </div>
+        <div class="file-preview-modal" id="file-preview-modal">
+            <div class="file-preview-content">
+                <div class="file-preview-header">
+                    <div class="file-preview-title" id="file-preview-title">Просмотр файла</div>
+                    <button class="file-preview-close" id="file-preview-close">×</button>
+                </div>
+                <div class="file-preview-body" id="file-preview-body"></div>
+            </div>
+        </div>
+        <footer>
+            <p>Онлайн служба поддержки клиентов ЭКС Бизнес</p>
+            <button class="mobile-toggle" id="mobile-toggle">Мобильная версия</button>
+        </footer>
+    </div>
+    <script type="module" src="js/data.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
